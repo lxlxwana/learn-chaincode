@@ -34,6 +34,10 @@ func main() {
 	}
 }
 
+//=================================================================================================================================//
+//	Init Invoke & Query functions
+//=================================================================================================================================//
+
 // Init is
 func (c *Chaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	err := stub.CreateTable("orders", []*shim.ColumnDefinition{
@@ -99,9 +103,34 @@ func (c *Chaincode) Query(stub shim.ChaincodeStubInterface, function string, arg
 	return nil, errors.New("Received unknown function " + function)
 }
 
+//=================================================================================================================================//
+//=================================================================================================================================//
+//=================================================================================================================================//
+//=================================================================================================================================//
+//=================================================================================================================================//
+
+func (c *Chaincode) test0(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	re, err := stub.GetCallerCertificate()
+	if err != nil {
+		return nil, err
+	}
+	return re, nil
+}
+func (c *Chaincode) test1(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	re, err := stub.GetCallerMetadata()
+	if err != nil {
+		return nil, err
+	}
+	return re, nil
+}
+
 func (c *Chaincode) ping(stub shim.ChaincodeStubInterface) ([]byte, error) {
 	return []byte("Hello, world!"), nil
 }
+
+//=================================================================================================================================//
+//	setOrder & getOrder to/from ledger
+//=================================================================================================================================//
 
 func (c *Chaincode) setOrder(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	if len(args) != 16 {

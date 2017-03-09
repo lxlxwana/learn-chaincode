@@ -223,7 +223,7 @@ func (c *Chaincode) getOrder(stub shim.ChaincodeStubInterface, args []string) ([
 	if err != nil {
 		return nil, fmt.Errorf("getRow Table operation failed. %s", err)
 	}
-	rowString := fmt.Sprintf("%s", row)
+	rowString := fmt.Sprintf("%s", <-row)
 	return []byte(rowString), nil
 }
 

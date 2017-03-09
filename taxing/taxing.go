@@ -81,7 +81,7 @@ func (c *Chaincode) ping(stub shim.ChaincodeStubInterface) ([]byte, error) {
 
 func (c *Chaincode) table(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	var table shim.Table
-	table.Name = "person file"
+	table.Name = "personfile"
 	var def0, def1 shim.ColumnDefinition
 	def0.Name, def0.Type, def0.Key = "name", shim.ColumnDefinition_STRING, true
 	def1.Name, def1.Type, def1.Key = "age", shim.ColumnDefinition_UINT32, false
@@ -112,10 +112,10 @@ func (c *Chaincode) table(stub shim.ChaincodeStubInterface, args []string) ([]by
 }
 
 func (c *Chaincode) getTable(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	table, err := stub.GetTable("person file")
-	if err != nil {
-		return nil, err
-	}
+	// table, err := stub.GetTable("personfile")
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	var myname shim.Column_String_
 	myname.String_ = "liang"
@@ -123,7 +123,7 @@ func (c *Chaincode) getTable(stub shim.ChaincodeStubInterface, args []string) ([
 	var key shim.Column
 	key.Value = &myname
 	keys = append(keys, key)
-	newrow, err := stub.GetRow(table.Name, keys)
+	newrow, err := stub.GetRow("personfile", keys)
 	if err != nil {
 		return nil, err
 	}

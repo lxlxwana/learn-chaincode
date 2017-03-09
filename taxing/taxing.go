@@ -162,7 +162,7 @@ func (c *Chaincode) enroll(stub shim.ChaincodeStubInterface, args []string) erro
 	if err != nil {
 		return err
 	}
-	err = stub.PutState(args[0], ca)
+	err = stub.PutState(args[0], ca[:12])
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func (c *Chaincode) isPassengerOne(stub shim.ChaincodeStubInterface) (bool, erro
 	if err != nil {
 		return false, err
 	}
-	return bytes.Equal(re, ca), nil
+	return bytes.Equal(re[:12], ca), nil
 }
 
 func (c *Chaincode) isPassengerTwo(stub shim.ChaincodeStubInterface) (bool, error) {

@@ -122,8 +122,7 @@ func (c *Chaincode) test0(stub shim.ChaincodeStubInterface, args []string) ([]by
 	if err != nil {
 		return nil, err
 	}
-	str := fmt.Sprintf("%s", re)
-	return []byte(str), nil
+	return re, errors.New(fmt.Sprintf("%s", re))
 }
 func (c *Chaincode) test1(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	ok, err := c.isPassengerOne(stub)

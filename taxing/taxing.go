@@ -7,6 +7,8 @@ import (
 
 	"strconv"
 
+	"bytes"
+
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
@@ -79,6 +81,8 @@ func (c *Chaincode) Invoke(stub shim.ChaincodeStubInterface, function string, ar
 		return c.ping(stub)
 	case "setOrder":
 		return c.setOrder(stub, args)
+	case "enroll":
+		return nil, c.enroll(stub, args)
 	}
 
 	fmt.Println("Invoke did not find func: " + function)
@@ -121,15 +125,96 @@ func (c *Chaincode) test0(stub shim.ChaincodeStubInterface, args []string) ([]by
 	return re, nil
 }
 func (c *Chaincode) test1(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	re, err := stub.GetCallerMetadata()
+	ok, err := c.isPassengerOne(stub)
 	if err != nil {
-		return nil, err
+		return []byte("error"), err
 	}
-	return re, nil
+	if ok {
+		return []byte("yes"), nil
+	}
+	return []byte("no"), nil
 }
 
-func (c *Chaincode) ping(stub shim.ChaincodeStubInterface) ([]byte, error) {
-	return []byte("Hello, world!"), nil
+//=================================================================================================================================//
+//	set & get state of passenger/driver to/from ledger
+//=================================================================================================================================//
+
+func (c *Chaincode) setState(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	if len(args) != 2 {
+		return nil, errors.New("Expecting 2 arguments")
+	}
+
+	return nil, nil
+}
+
+//=================================================================================================================================//
+//	identity check
+//=================================================================================================================================//
+
+// we have 4 user
+// user_type1_0 user_type1_1 user_type2_0 user_type2_1
+func (c *Chaincode) enroll(stub shim.ChaincodeStubInterface, args []string) error {
+	if len(args) != 1 {
+		return errors.New("Expecting 1 arguments")
+	}
+
+	ca, err := stub.GetCallerCertificate()
+	if err != nil {
+		return err
+	}
+	err = stub.PutState(args[0], ca)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Chaincode) isPassengerOne(stub shim.ChaincodeStubInterface) (bool, error) {
+	re, err := stub.GetCallerCertificate()
+	if err != nil {
+		return false, err
+	}
+	ca, err := stub.GetState("user_type1_0")
+	if err != nil {
+		return false, err
+	}
+	return bytes.Equal(re, ca), nil
+}
+
+func (c *Chaincode) isPassengerTwo(stub shim.ChaincodeStubInterface) (bool, error) {
+	re, err := stub.GetCallerCertificate()
+	if err != nil {
+		return false, err
+	}
+	ca, err := stub.GetState("user_type1_1")
+	if err != nil {
+		return false, err
+	}
+	return bytes.Equal(re, ca), nil
+}
+
+func (c *Chaincode) isDriverOne(stub shim.ChaincodeStubInterface) (bool, error) {
+	re, err := stub.GetCallerCertificate()
+	if err != nil {
+		return false, err
+	}
+	ca, err := stub.GetState("user_type2_0")
+	if err != nil {
+		return false, err
+	}
+	return bytes.Equal(re, ca), nil
+}
+
+func (c *Chaincode) isDriverTwo(stub shim.ChaincodeStubInterface) (bool, error) {
+	re, err := stub.GetCallerCertificate()
+	if err != nil {
+		return false, err
+	}
+	ca, err := stub.GetState("user_type2_1")
+	if err != nil {
+		return false, err
+	}
+	return bytes.Equal(re, ca), nil
 }
 
 //=================================================================================================================================//
@@ -290,4 +375,8 @@ func (c *Chaincode) write(stub shim.ChaincodeStubInterface, args []string) ([]by
 		return nil, err
 	}
 	return nil, nil
+}
+
+func (c *Chaincode) ping(stub shim.ChaincodeStubInterface) ([]byte, error) {
+	return []byte("Hello, world!"), nil
 }

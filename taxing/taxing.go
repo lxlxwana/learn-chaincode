@@ -219,7 +219,7 @@ func (c *Chaincode) getOrder(stub shim.ChaincodeStubInterface, args []string) ([
 	var columns []shim.Column
 	col1 := shim.Column{Value: &shim.Column_Uint64{Uint64: id}}
 	columns = append(columns, col1)
-	row, err := stub.GetRow("orders", columns)
+	row, err := stub.GetRows("orders", columns)
 	if err != nil {
 		return nil, fmt.Errorf("getRow Table operation failed. %s", err)
 	}

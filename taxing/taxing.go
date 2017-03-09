@@ -34,6 +34,14 @@ func main() {
 
 // Init is
 func (c *Chaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+	err := stub.CreateTable("personfile", []*shim.ColumnDefinition{
+		&shim.ColumnDefinition{Name: "name", Type: shim.ColumnDefinition_STRING, Key: true},
+		&shim.ColumnDefinition{Name: "age", Type: shim.ColumnDefinition_INT32, Key: false},
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 
@@ -49,8 +57,8 @@ func (c *Chaincode) Invoke(stub shim.ChaincodeStubInterface, function string, ar
 		return c.write(stub, args)
 	case "ping":
 		return c.ping(stub)
-	case "table":
-		return c.table(stub, args)
+	case "settable":
+		return c.setTable(stub, args)
 	}
 
 	fmt.Println("Invoke did not find func: " + function)
@@ -79,59 +87,52 @@ func (c *Chaincode) ping(stub shim.ChaincodeStubInterface) ([]byte, error) {
 	return []byte("Hello, world!"), nil
 }
 
-func (c *Chaincode) table(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	var table shim.Table
-	table.Name = "personfile"
-	var def0, def1 shim.ColumnDefinition
-	def0.Name, def0.Type, def0.Key = "name", shim.ColumnDefinition_STRING, true
-	def1.Name, def1.Type, def1.Key = "age", shim.ColumnDefinition_UINT32, false
-	table.ColumnDefinitions = append(table.ColumnDefinitions, &def0, &def1)
-	err := stub.CreateTable(table.Name, table.ColumnDefinitions)
+func (c *Chaincode) setTable(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	// col1Val := args[0]
+	// col2Int, err := strconv.ParseInt(args[1], 10, 32)
+	// if err != nil {
+	// 	return nil, errors.New("insertTableOne failed. arg[1] must be convertable to int32")
+	// }
+	// col2Val := int32(col2Int)
+	// col3Int, err := strconv.ParseInt(args[2], 10, 32)
+	// if err != nil {
+	// 	return nil, errors.New("insertTableOne failed. arg[2] must be convertable to int32")
+	// }
+	// col3Val := int32(col3Int)
+
+	var columns []*shim.Column
+	col1 := shim.Column{Value: &shim.Column_String_{String_: "liang"}}
+	col2 := shim.Column{Value: &shim.Column_Int32{Int32: 18}}
+	columns = append(columns, &col1)
+	columns = append(columns, &col2)
+	row := shim.Row{Columns: columns}
+	ok, err := stub.InsertRow("personfile", row)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("insert Table operation failed. %s", err)
+	}
+	if !ok {
+		return nil, errors.New("insert Table operation failed. Row with given key already exists")
 	}
 
-	var row shim.Row
-	var col0, col1 shim.Column
-	var myname shim.Column_String_
-	myname.String_ = "liang"
-	var myage shim.Column_Int32
-	myage.Int32 = 18
-	col0.Value = &myname
-	col1.Value = &myage
-	row.Columns = append(row.Columns, &col0, &col1)
-	Ok, err := stub.InsertRow(table.Name, row)
-	if !Ok {
-		if err != nil {
-			return nil, err
-		}
-		return nil, errors.New("Row already exists for the given key")
-	}
-
-	return nil, errors.New("ending")
+	return nil, err
 }
 
 func (c *Chaincode) getTable(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	// table, err := stub.GetTable("personfile")
-	// if err != nil {
-	// 	return nil, err
+
+	// 	if len(args) < 1 {
+	// 	return nil, errors.New("getRowTableOne failed. Must include 1 key value")
 	// }
 
-	var myname shim.Column_String_
-	myname.String_ = "liang"
-	var keys []shim.Column
-	var key shim.Column
-	key.Value = &myname
-	keys = append(keys, key)
-	newrow, err := stub.GetRow("personfile", keys)
+	var columns []shim.Column
+	col1 := shim.Column{Value: &shim.Column_String_{String_: "liang"}}
+	columns = append(columns, col1)
+	row, err := stub.GetRow("personfile", columns)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getRow Table operation failed. %s", err)
 	}
 
-	var result []byte
-	result = append(result, []byte(newrow.Columns[0].GetString_())...)
-	result = append(result, []byte(fmt.Sprintf("%d", newrow.Columns[1].GetInt32()))...)
-	return result, err
+	rowString := fmt.Sprintf("%s", row)
+	return []byte(rowString), nil
 }
 
 //=================================================================================================================================//

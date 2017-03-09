@@ -5,11 +5,14 @@ import (
 
 	"errors"
 
+	"strconv"
+
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
 // Chaincode is
 type Chaincode struct {
+	data int
 }
 
 func main() {
@@ -21,6 +24,7 @@ func main() {
 
 // Init is
 func (c *Chaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
+	c.data = 100
 	return nil, nil
 }
 
@@ -59,13 +63,13 @@ func (c *Chaincode) read(stub shim.ChaincodeStubInterface, args []string) ([]byt
 		return nil, errors.New("Incorrect number of arguments. Expecting key to query")
 	}
 
-	key := args[0]
-	valBytes, err := stub.GetState(key)
-	if err != nil {
-		jsonResp := "{\"Error\":\"Failed to get state for " + key + "\"}"
-		return nil, errors.New(jsonResp)
-	}
-	return valBytes, nil
+	//key := args[0]
+	//valBytes, err := stub.GetState(key)
+	// if err != nil {
+	// 	jsonResp := "{\"Error\":\"Failed to get state for " + key + "\"}"
+	// 	return nil, errors.New(jsonResp)
+	// }
+	return []byte(strconv.Itoa(c.data)), nil
 }
 
 func (c *Chaincode) write(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {

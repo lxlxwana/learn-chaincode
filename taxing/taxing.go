@@ -49,6 +49,8 @@ func (c *Chaincode) Invoke(stub shim.ChaincodeStubInterface, function string, ar
 		return c.write(stub, args)
 	case "ping":
 		return c.ping(stub)
+	case "table":
+		return c.table(stub, args)
 	}
 
 	fmt.Println("Invoke did not find func: " + function)

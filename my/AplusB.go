@@ -1,4 +1,4 @@
-package my
+package main
 
 import (
 	"fmt"
@@ -13,12 +13,12 @@ import (
 type Chaincode struct {
 }
 
-// func main() {
-// 	err := shim.Start(new(Chaincode))
-// 	if err != nil {
-// 		fmt.Printf("Error starting chaincode %s", err)
-// 	}
-// }
+func main() {
+	err := shim.Start(new(Chaincode))
+	if err != nil {
+		fmt.Printf("Error starting chaincode %s", err)
+	}
+}
 
 func (c *Chaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	var zero = []byte{'0'}

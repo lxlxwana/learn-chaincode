@@ -108,7 +108,7 @@ func (c *Chaincode) table(stub shim.ChaincodeStubInterface, args []string) ([]by
 		return nil, errors.New("Row already exists for the given key")
 	}
 
-	return nil, err
+	return nil, errors.New("ending")
 }
 
 func (c *Chaincode) getTable(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {

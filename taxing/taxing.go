@@ -97,6 +97,10 @@ func (c *Chaincode) Query(stub shim.ChaincodeStubInterface, function string, arg
 		return c.ping(stub)
 	case "getOrder":
 		return c.getOrder(stub, args)
+	case "test0":
+		return c.test0(stub, args)
+	case "test1":
+		return c.test1(stub, args)
 	}
 
 	fmt.Println("Query did not find func: " + function)

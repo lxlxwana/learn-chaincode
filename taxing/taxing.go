@@ -106,6 +106,17 @@ func (c *Chaincode) table(stub shim.ChaincodeStubInterface, args []string) ([]by
 		return nil, errors.New("Row already exists for the given key")
 	}
 
+	return nil, err
+}
+
+func (c *Chaincode) getTable(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	table, err := stub.GetTable("person file")
+	if err != nil {
+		return nil, err
+	}
+
+	var myname shim.Column_String_
+	myname.String_ = "liang"
 	var keys []shim.Column
 	var key shim.Column
 	key.Value = &myname

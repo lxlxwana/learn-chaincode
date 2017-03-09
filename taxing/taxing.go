@@ -42,8 +42,8 @@ func main() {
 func (c *Chaincode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	err := stub.CreateTable("orders", []*shim.ColumnDefinition{
 		&shim.ColumnDefinition{Name: "id", Type: shim.ColumnDefinition_UINT64, Key: true},
-		&shim.ColumnDefinition{Name: "passenger", Type: shim.ColumnDefinition_STRING, Key: true},
-		&shim.ColumnDefinition{Name: "driver", Type: shim.ColumnDefinition_STRING, Key: true},
+		&shim.ColumnDefinition{Name: "passenger", Type: shim.ColumnDefinition_STRING, Key: false},
+		&shim.ColumnDefinition{Name: "driver", Type: shim.ColumnDefinition_STRING, Key: false},
 		&shim.ColumnDefinition{Name: "startX", Type: shim.ColumnDefinition_INT64, Key: false},
 		&shim.ColumnDefinition{Name: "startY", Type: shim.ColumnDefinition_INT64, Key: false},
 		&shim.ColumnDefinition{Name: "destinationX", Type: shim.ColumnDefinition_INT64, Key: false},
@@ -51,10 +51,10 @@ func (c *Chaincode) Init(stub shim.ChaincodeStubInterface, function string, args
 		&shim.ColumnDefinition{Name: "preFee", Type: shim.ColumnDefinition_INT32, Key: false},
 		&shim.ColumnDefinition{Name: "actFeeTime", Type: shim.ColumnDefinition_INT32, Key: false},
 		&shim.ColumnDefinition{Name: "actFeeDis", Type: shim.ColumnDefinition_INT32, Key: false},
-		&shim.ColumnDefinition{Name: "startTime", Type: shim.ColumnDefinition_UINT64, Key: true},
+		&shim.ColumnDefinition{Name: "startTime", Type: shim.ColumnDefinition_UINT64, Key: false},
 		&shim.ColumnDefinition{Name: "pickTime", Type: shim.ColumnDefinition_UINT64, Key: false},
 		&shim.ColumnDefinition{Name: "endTime", Type: shim.ColumnDefinition_UINT64, Key: false},
-		&shim.ColumnDefinition{Name: "state", Type: shim.ColumnDefinition_INT32, Key: true},
+		&shim.ColumnDefinition{Name: "state", Type: shim.ColumnDefinition_INT32, Key: false},
 		&shim.ColumnDefinition{Name: "passInfo", Type: shim.ColumnDefinition_STRING, Key: false},
 		&shim.ColumnDefinition{Name: "driverInfo", Type: shim.ColumnDefinition_STRING, Key: false},
 	})
@@ -252,11 +252,11 @@ func (c *Chaincode) getOrder(stub shim.ChaincodeStubInterface, args []string) ([
 	var columns []shim.Column
 	col1 := shim.Column{Value: &shim.Column_Uint64{Uint64: id}}
 	columns = append(columns, col1)
-	row, err := stub.GetRows("orders", columns)
+	row, err := stub.GetRow("orders", columns)
 	if err != nil {
 		return nil, fmt.Errorf("getRow Table operation failed. %s", err)
 	}
-	rowString := fmt.Sprintf("%s", <-row)
+	rowString := fmt.Sprintf("%s", row)
 	return []byte(rowString), nil
 }
 

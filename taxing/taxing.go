@@ -291,10 +291,11 @@ func (c *Chaincode) isEnroll(stub shim.ChaincodeStubInterface, args []string) ([
 	if err != nil {
 		return nil, err
 	}
-	if args[1] == user.PwdHash {
-		return []byte(strconv.Itoa(user.Role)), nil
-	}
-	return []byte("0"), nil
+	return []byte(user.PwdHash), nil
+	// if args[1] == user.PwdHash {
+	// 	return []byte(strconv.Itoa(user.Role)), nil
+	// }
+	// return []byte("0"), nil
 }
 
 // func (c *Chaincode) isPassengerOne(stub shim.ChaincodeStubInterface, userName string, pwdHash string) (bool, error) {

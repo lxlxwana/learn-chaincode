@@ -115,6 +115,9 @@ func (c *Chaincode) Init(stub shim.ChaincodeStubInterface, function string, args
 	}
 
 	var newOP OrderPool
+	// newOP.Total = 1
+	// newOP.IDs = append(newOP.IDs, 0)
+	// newOP.Act = append(newOP.Act, false)
 	jsonResult, err := json.Marshal(newOP)
 	if err != nil {
 		return nil, err
@@ -222,6 +225,7 @@ func (c *Chaincode) passengerSubmitOrder(stub shim.ChaincodeStubInterface, args 
 		return nil, err
 	}
 	newOrder.State = ORDER_STATE_WAITCOMPET
+	newOrder.PassInfo = passenger.PassengerInfo
 
 	err = c.setOrder(stub, fmt.Sprintf("%d", newOrder.ID), newOrder)
 	if err != nil {
@@ -810,7 +814,12 @@ func (c *Chaincode) deleteOrderPool(stub shim.ChaincodeStubInterface, id uint64)
 		return err
 	}
 
-	op.Act[id] = false
+	var i uint
+	for i = 0; i < op.Total; i++ {
+		if op.IDs[i] == id {
+			op.Act[i] = false
+		}
+	}
 
 	jsonResult, err = json.Marshal(op)
 	if err != nil {

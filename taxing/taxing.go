@@ -466,7 +466,7 @@ func (c *Chaincode) getUser(stub shim.ChaincodeStubInterface, key string) (User,
 	if err != nil {
 		return re, err
 	}
-	err = json.Unmarshal(jsonResult, re)
+	err = json.Unmarshal(jsonResult, &re)
 	if err != nil {
 		return re, err
 	}

@@ -828,10 +828,11 @@ const earthRadius = 6378.137
 const threadhold = 100.0
 
 func driverSelect(order Order, driver User) bool {
-	if distance(order.StartX, order.StartY, driver.X, driver.Y) < threadhold {
-		return true
-	}
-	return false
+	// if distance(order.StartX, order.StartY, driver.X, driver.Y) < threadhold {
+	// 	return true
+	// }
+	// return false
+	return true
 }
 
 func distance(x1 float64, y1 float64, x2 float64, y2 float64) float64 {

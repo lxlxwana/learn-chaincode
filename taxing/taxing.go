@@ -164,7 +164,7 @@ func (c *Chaincode) Query(stub shim.ChaincodeStubInterface, function string, arg
 		return c.isEnroll(stub, args)
 	case "getdriverstate":
 		return c.getDriverState(stub, args)
-	case "getpassstate:":
+	case "getpassstate":
 		return c.getPassengerState(stub, args)
 	case "queryorderpool":
 		return c.driverQueryOrderPool(stub, args)

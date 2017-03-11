@@ -271,10 +271,10 @@ func (c *Chaincode) enroll(stub shim.ChaincodeStubInterface, args []string) ([]b
 		return nil, errors.New("arguments must be convertable to int")
 	}
 	switch role {
-	case 0:
-		newUser.DriverInfo = args[2]
 	case 1:
-		newUser.PassengerInfo = args[2]
+		newUser.DriverInfo = args[3]
+	case 2:
+		newUser.PassengerInfo = args[3]
 	}
 	newUser.Balance = 100000000
 	err = c.setUser(stub, args[0], newUser)
@@ -291,11 +291,10 @@ func (c *Chaincode) isEnroll(stub shim.ChaincodeStubInterface, args []string) ([
 	if err != nil {
 		return nil, err
 	}
-	return []byte(user.PwdHash), nil
-	// if args[1] == user.PwdHash {
-	// 	return []byte(strconv.Itoa(user.Role)), nil
-	// }
-	// return []byte("0"), nil
+	if args[1] == user.PwdHash {
+		return []byte(strconv.Itoa(user.Role)), nil
+	}
+	return []byte("0"), nil
 }
 
 // func (c *Chaincode) isPassengerOne(stub shim.ChaincodeStubInterface, userName string, pwdHash string) (bool, error) {

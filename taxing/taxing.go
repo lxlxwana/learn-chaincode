@@ -9,19 +9,25 @@ import (
 
 	"encoding/json"
 
+	"math"
+
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
 // State defination
 const (
-	DRIVER_STATE_HAND           = 0
-	DRIVER_STATE_COMPECT        = 1
-	DRIVER_STATE_PCIKUP         = 2
-	DRIVER_STATE_ONGOING        = 3
-	PASSENGER_STATE_HAND        = 0
-	PASSENGER_STATE_WAITCOMPECT = 1
-	PASSENGER_STATE_WAITPICKUP  = 2
-	PASSENGER_STATE_ONGOING     = 3
+	DRIVER_STATE_HAND          = 0
+	DRIVER_STATE_PCIKUP        = 1
+	DRIVER_STATE_ONGOING       = 2
+	PASSENGER_STATE_HAND       = 0
+	PASSENGER_STATE_WAITCOMPET = 1
+	PASSENGER_STATE_WAITPICKUP = 2
+	PASSENGER_STATE_ONGOING    = 3
+	ORDER_STATE_INVALID        = 0
+	ORDER_STATE_WAITCOMPET     = 1
+	ORDER_STATE_ONGOING        = 2
+	ORDER_STATE_FINISH         = 3
+	ORDER_STATE_ABORT          = 4
 )
 
 // Chaincode is
@@ -54,19 +60,26 @@ type Order struct {
 	DriverInfo string  `json:"driverInfo"`
 }
 
+// OrderPool is
+type OrderPool struct {
+	Total uint     `json:"total"`
+	IDs   []uint64 `json:"ids"`
+	Act   []bool   `json:"act"`
+}
+
 // User is
 type User struct {
-	Name            string    `json:"name"`
-	X               float64   `json:"x"`
-	Y               float64   `json:"y"`
-	DriverInfo      string    `json:"dInfo"`
-	DriverState     int32     `json:"dState"`
-	DriverOrderPool [8]uint64 `json:"orderpool"`
-	PassengerInfo   string    `json:"pInfo"`
-	PassengerState  int       `json:"pState"`
-	Balance         int32     `json:"balance"`
-	Role            int       `json:"role"`
-	PwdHash         string    `jons:"pwdHash"`
+	Name           string  `json:"name"`
+	X              float64 `json:"x"`
+	Y              float64 `json:"y"`
+	DriverInfo     string  `json:"dInfo"`
+	DriverState    int32   `json:"dState"`
+	PassengerInfo  string  `json:"pInfo"`
+	PassengerState int32   `json:"pState"`
+	Balance        int32   `json:"balance"`
+	Role           int     `json:"role"`
+	PwdHash        string  `json:"pwdHash"`
+	OrderID        uint64  `json:"orderID"`
 }
 
 //=================================================================================================================================//
@@ -96,15 +109,17 @@ func (c *Chaincode) Init(stub shim.ChaincodeStubInterface, function string, args
 		return nil, err
 	}
 
-	// var newUser User
-	// err = c.setUser(stub, "user_type1_0", newUser)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// err = c.setUser(stub, "user_type2_0", newUser)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	err = stub.PutState("@counterOrder", []byte(fmt.Sprintf("%d", 1)))
+	if err != nil {
+		return nil, err
+	}
+
+	var newOP OrderPool
+	jsonResult, err := json.Marshal(newOP)
+	if err != nil {
+		return nil, err
+	}
+	err = stub.PutState("@orderPool", jsonResult)
 
 	return nil, nil
 }
@@ -134,12 +149,6 @@ func (c *Chaincode) Query(stub shim.ChaincodeStubInterface, function string, arg
 		return c.read(stub, args)
 	case "ping":
 		return c.ping(stub)
-	case "queryOrder":
-		return c.queryOrder(stub, args)
-	case "test0":
-		return c.test0(stub, args)
-	case "test1":
-		return c.test1(stub, args)
 	case "isEnroll":
 		return c.isEnroll(stub, args)
 	}
@@ -154,55 +163,190 @@ func (c *Chaincode) Query(stub shim.ChaincodeStubInterface, function string, arg
 //=================================================================================================================================//
 //=================================================================================================================================//
 
-func (c *Chaincode) test0(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	return nil, nil
-}
-func (c *Chaincode) test1(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	return nil, nil
-}
-
 //=================================================================================================================================//
 // 主流程
 //=================================================================================================================================//
 
-// 用户名 密码 起点经度 起点纬度 终点经度 终点纬度 当前时间
+// 用户名 密码 起点经度 起点纬度 终点经度 终点纬度 当前时间 起点地名 终点地名
 func (c *Chaincode) passengerSubmitOrder(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	passenger, err := c.getUser(stub, args[0])
+	if err != nil {
+		return nil, err
+	}
+	if passenger.PassengerState != PASSENGER_STATE_HAND {
+		return nil, errors.New("Passenger must be at state \"hand\"")
+	}
 
-	// if(passengerStates[msg.sender] != 0) //乘客必须处于挂起状态才能抢单
-	// {
-	// 	return 0;
-	// }
+	var newOrder Order
+	newOrder.ID, err = c.getNextID(stub)
+	if err != nil {
+		return nil, err
+	}
+	newOrder.Passenger = args[0]
+	newOrder.StartX, err = strconv.ParseFloat(args[2], 64)
+	if err != nil {
+		return nil, err
+	}
+	newOrder.StartY, err = strconv.ParseFloat(args[3], 64)
+	if err != nil {
+		return nil, err
+	}
+	newOrder.DestX, err = strconv.ParseFloat(args[4], 64)
+	if err != nil {
+		return nil, err
+	}
+	newOrder.DestY, err = strconv.ParseFloat(args[5], 64)
+	if err != nil {
+		return nil, err
+	}
+	newOrder.StartTime, err = strconv.ParseUint(args[6], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	newOrder.State = ORDER_STATE_WAITCOMPET
 
-	// //创建新的订单
-	// passengerToOrder[msg.sender] = counterOrderIndex;
-	// orders[counterOrderIndex].id = counterOrderIndex;
-	// orders[counterOrderIndex].passenger = msg.sender;
-	// orders[counterOrderIndex].driver = 0x0;
-	// orders[counterOrderIndex].s_x = s_x;
-	// orders[counterOrderIndex].s_y = s_y;
-	// orders[counterOrderIndex].d_x = d_x;
-	// orders[counterOrderIndex].d_y = d_y;
-	// orders[counterOrderIndex].distance = 0;//calculateDistance(s_x, d_x, s_y, d_y);
-	// orders[counterOrderIndex].preFee = penaltyPrice + calculatePreFee(s_x, s_y, d_x, d_y);
-	// orders[counterOrderIndex].actFee = 0;
-	// orders[counterOrderIndex].actFeeTime = 0;
-	// orders[counterOrderIndex].startTime = time;
-	// orders[counterOrderIndex].state = 1;
-	// orders[counterOrderIndex].passInfo = passInfo;
-	// orders[counterOrderIndex].sName = sName;
-	// orders[counterOrderIndex].dName = dName;
-	// counterOrderIndex++;
-	// passengerStates[msg.sender] = 1; //乘客订单分配中
+	err = c.setOrder(stub, fmt.Sprintf("%d", newOrder.ID), newOrder)
+	if err != nil {
+		return nil, err
+	}
 
-	// if(!driverSelction(s_x, s_y, counterOrderIndex-1))
-	// {
-	// 	orders[counterOrderIndex-1].state = 4;
-	// 	passengerStates[msg.sender] = 0;
-	// 	return 0;
-	// }
+	err = stub.PutState(fmt.Sprintf("@SPlace_%d", newOrder.ID), []byte(args[7]))
+	if err != nil {
+		return nil, err
+	}
+	err = stub.PutState(fmt.Sprintf("@DPlace_%d", newOrder.ID), []byte(args[8]))
+	if err != nil {
+		return nil, err
+	}
 
-	// return counterOrderIndex-1;
-	return nil, nil
+	passenger.PassengerState = PASSENGER_STATE_WAITCOMPET
+	passenger.OrderID = newOrder.ID
+	err = c.setUser(stub, args[0], passenger)
+	if err != nil {
+		return nil, err
+	}
+	c.addOrderPool(stub, newOrder.ID)
+	return []byte("success submit order"), nil
+}
+
+// 用户名 密码 订单号
+func (c *Chaincode) driverCompetOrder(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	driver, err := c.getUser(stub, args[0])
+	if err != nil {
+		return nil, err
+	}
+	if driver.DriverState != DRIVER_STATE_HAND {
+		return nil, errors.New("Driver must be at state \"hand\"")
+	}
+
+	orderState, err := c.getOrderState(stub, args[2])
+	if err != nil {
+		return nil, err
+	}
+	if orderState != ORDER_STATE_WAITCOMPET {
+		return nil, errors.New("order must be at state \"wait compet\"")
+	}
+
+	order, err := c.getOrder(stub, args[2])
+	if err != nil {
+		return nil, err
+	}
+	order.Driver = args[0]
+	order.DriverInfo = driver.DriverInfo
+
+	driver.DriverState = DRIVER_STATE_PCIKUP
+	err = c.setUser(stub, args[0], driver)
+	if err != nil {
+		return nil, err
+	}
+	err = c.setPassengerState(stub, order.Passenger, PASSENGER_STATE_WAITPICKUP)
+	if err != nil {
+		return nil, err
+	}
+	c.deleteOrderPool(stub, order.ID)
+	return []byte("success compet order"), nil
+}
+
+// 用户名 密码 当前时间
+func (c *Chaincode) driverPickUp(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	driver, err := c.getUser(stub, args[0])
+	if err != nil {
+		return nil, err
+	}
+	if driver.DriverState != DRIVER_STATE_PCIKUP {
+		return nil, errors.New("Driver must be at state \"pickup\"")
+	}
+
+	order, err := c.getOrder(stub, fmt.Sprintf("%d", driver.OrderID))
+	if err != nil {
+		return nil, err
+	}
+
+	now, err := strconv.ParseUint(args[2], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	order.PickTime = now
+
+	driver.DriverState = DRIVER_STATE_ONGOING
+	err = c.setUser(stub, args[0], driver)
+	if err != nil {
+		return nil, err
+	}
+	err = c.setPassengerState(stub, order.Passenger, PASSENGER_STATE_ONGOING)
+	if err != nil {
+		return nil, err
+	}
+	return []byte("success pickup"), nil
+}
+
+// 用户名 密码 当前时间
+
+const unitPriceTime = 1
+const startingPrice = 1100
+const unitPriceDistance = 1500
+
+func (c *Chaincode) driverFinishOrder(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	driver, err := c.getUser(stub, args[0])
+	if err != nil {
+		return nil, err
+	}
+	if driver.DriverState != DRIVER_STATE_ONGOING {
+		return nil, errors.New("Driver must be at state \"ongoing\"")
+	}
+	order, err := c.getOrder(stub, fmt.Sprintf("%d", driver.OrderID))
+	if err != nil {
+		return nil, err
+	}
+	passenger, err := c.getUser(stub, order.Passenger)
+	if err != nil {
+		return nil, err
+	}
+
+	now, err := strconv.ParseUint(args[2], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	order.EndTime = now
+	order.State = ORDER_STATE_FINISH
+	order.ActFeeTime = int32((order.EndTime - order.StartTime) * unitPriceTime)
+	order.ActFeeDis = startingPrice + int32(distance(order.StartX, order.StartY, order.DestX, order.DestY)*unitPriceDistance)
+
+	driver.DriverState = DRIVER_STATE_HAND
+	err = c.setUser(stub, args[0], driver)
+	if err != nil {
+		return nil, err
+	}
+	passenger.PassengerState = PASSENGER_STATE_HAND
+	err = c.setUser(stub, order.Passenger, passenger)
+	if err != nil {
+		return nil, err
+	}
+	err = c.writeOrder2Table(stub, order)
+	if err != nil {
+		return []byte("success finish, but cannot write to table"), nil
+	}
+	return []byte("success finish "), nil
 }
 
 //=================================================================================================================================//
@@ -210,10 +354,6 @@ func (c *Chaincode) passengerSubmitOrder(stub shim.ChaincodeStubInterface, args 
 
 // 用户名  密码哈希值 经度 纬度 是否接单
 func (c *Chaincode) driverUpdatePosition(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	// userName, userPWD := args[0], args[1]
-	// if flag, err := c.isDriverOne(stub, userName, userPWD); !flag {
-	// 	return nil, err
-	// }
 	userName := args[0]
 	old, err := c.getUser(stub, userName)
 	if err != nil {
@@ -232,6 +372,60 @@ func (c *Chaincode) driverUpdatePosition(stub shim.ChaincodeStubInterface, args 
 		return nil, err
 	}
 	return []byte("success update driver position"), nil
+}
+
+// 订单号
+func (c *Chaincode) getDriverPosition(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	order, err := c.getOrder(stub, args[0])
+	if err != nil {
+		return nil, err
+	}
+	driver, err := c.getUser(stub, order.Driver)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(fmt.Sprintf("{\"driverPosition\":[%f,%f]", driver.X, driver.Y)), nil
+}
+
+// RetOrder is
+type RetOrder struct {
+	SName string `json:"sname"`
+	DName string `json:"dname"`
+	ID    uint64 `json:"id"`
+}
+
+// 用户名  密码
+func (c *Chaincode) driverQueryOrderPool(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	userName := args[0]
+	user, err := c.getUser(stub, userName)
+	if err != nil {
+		return nil, err
+	}
+	op, err := c.getOrderPool(stub, user)
+	if err != nil {
+		return nil, err
+	}
+	var ret [4]RetOrder
+	for i := 0; i < 4; i++ {
+		if op[i] != 0 {
+			sName, err := stub.GetState(fmt.Sprintf("@SPlace_%d", op[i]))
+			if err != nil {
+				return nil, err
+			}
+			ret[i].SName = fmt.Sprintf("%s", sName)
+			dName, err := stub.GetState(fmt.Sprintf("@DPlace_%d", op[i]))
+			if err != nil {
+				return nil, err
+			}
+			ret[i].DName = fmt.Sprintf("%s", dName)
+			ret[i].ID = op[i]
+		}
+	}
+	re, err := json.Marshal(ret)
+	if err != nil {
+		return nil, err
+	}
+	return re, nil
 }
 
 //=================================================================================================================================//
@@ -256,6 +450,53 @@ func (c *Chaincode) getPassengerState(stub shim.ChaincodeStubInterface, args []s
 	return []byte(strconv.Itoa(int(user.PassengerState))), nil
 }
 
+func (c *Chaincode) getOrderState(stub shim.ChaincodeStubInterface, idx string) (int32, error) {
+	order, err := c.getOrder(stub, idx)
+	if err != nil {
+		return 0, err
+	}
+	return order.State, nil
+}
+
+func (c *Chaincode) setOrderState(stub shim.ChaincodeStubInterface, idx string, newState int32) error {
+	old, err := c.getOrder(stub, idx)
+	if err != nil {
+		return err
+	}
+	old.State = newState
+	err = c.setOrder(stub, idx, old)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Chaincode) setDriverState(stub shim.ChaincodeStubInterface, userName string, newState int32) error {
+	old, err := c.getUser(stub, userName)
+	if err != nil {
+		return err
+	}
+	old.DriverState = newState
+	err = c.setUser(stub, userName, old)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Chaincode) setPassengerState(stub shim.ChaincodeStubInterface, userName string, newState int32) error {
+	old, err := c.getUser(stub, userName)
+	if err != nil {
+		return err
+	}
+	old.PassengerState = newState
+	err = c.setUser(stub, userName, old)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 //=================================================================================================================================//
 //	identity check
 //=================================================================================================================================//
@@ -268,7 +509,7 @@ func (c *Chaincode) enroll(stub shim.ChaincodeStubInterface, args []string) ([]b
 	newUser.PwdHash = args[1]
 	role, err := strconv.Atoi(args[3])
 	if err != nil {
-		return nil, errors.New("arguments must be convertable to int")
+		return nil, errors.New("role must be convertable to int")
 	}
 	switch role {
 	case 1:
@@ -298,28 +539,6 @@ func (c *Chaincode) isEnroll(stub shim.ChaincodeStubInterface, args []string) ([
 	return []byte("0"), nil
 }
 
-// func (c *Chaincode) isPassengerOne(stub shim.ChaincodeStubInterface, userName string, pwdHash string) (bool, error) {
-// 	if userName != "user_type1_0" {
-// 		return false, nil
-// 	}
-// 	re, err := stub.GetState("user_type1_0_pwd")
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	return bytes.Equal([]byte(pwdHash), re), nil
-// }
-
-// func (c *Chaincode) isDriverOne(stub shim.ChaincodeStubInterface, userName string, pwdHash string) (bool, error) {
-// 	if userName != "user_type2_0" {
-// 		return false, nil
-// 	}
-// 	re, err := stub.GetState("user_type2_0_pwd")
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	return bytes.Equal([]byte(pwdHash), re), nil
-// }
-
 //=================================================================================================================================//
 //	setOrder & getOrder to/from ledger
 //=================================================================================================================================//
@@ -336,9 +555,9 @@ func (c *Chaincode) setOrder(stub shim.ChaincodeStubInterface, key string, order
 	return nil
 }
 
-func (c *Chaincode) getOrder(stub shim.ChaincodeStubInterface, key string) (Order, error) {
+func (c *Chaincode) getOrder(stub shim.ChaincodeStubInterface, idx string) (Order, error) {
 	var re Order
-	jsonResult, err := stub.GetState(key)
+	jsonResult, err := stub.GetState(idx)
 	if err != nil {
 		return re, err
 	}
@@ -349,7 +568,7 @@ func (c *Chaincode) getOrder(stub shim.ChaincodeStubInterface, key string) (Orde
 	return re, nil
 }
 
-func (c *Chaincode) writeOrder2Table(stub shim.ChaincodeStubInterface, order Order) ([]byte, error) {
+func (c *Chaincode) writeOrder2Table(stub shim.ChaincodeStubInterface, order Order) error {
 	startX := fmt.Sprintf("%f", order.StartX)
 	startY := fmt.Sprintf("%f", order.StartY)
 	destinationX := fmt.Sprintf("%f", order.DestX)
@@ -378,26 +597,23 @@ func (c *Chaincode) writeOrder2Table(stub shim.ChaincodeStubInterface, order Ord
 
 	ok, err := stub.InsertRow("orders", row)
 	if err != nil {
-		return nil, fmt.Errorf("insert Table operation failed. %s", err)
+		return fmt.Errorf("insert Table operation failed. %s", err)
 	}
 	if !ok {
 		ok, err := stub.ReplaceRow("orders", row)
 		if err != nil {
-			return nil, fmt.Errorf("replace Row operation failed. %s", err)
+			return fmt.Errorf("replace Row operation failed. %s", err)
 		}
 		if !ok {
-			return nil, errors.New("replace Row operation failed. Row with given key does not exist")
+			return errors.New("replace Row operation failed. Row with given key does not exist")
 		}
 	}
 
-	return nil, err
+	return err
 }
 
-func (c *Chaincode) queryOrder(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	if len(args) < 1 {
-		return nil, errors.New("getOrder failed. Must include at least 1 key value")
-	}
-
+//订单编号
+func (c *Chaincode) queryOrderFromTable(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	var id uint64
 	id, err := strconv.ParseUint(args[0], 10, 64)
 	var columns []shim.Column
@@ -409,6 +625,15 @@ func (c *Chaincode) queryOrder(stub shim.ChaincodeStubInterface, args []string) 
 	}
 	rowString := fmt.Sprintf("%s", row)
 	return []byte(rowString), nil
+}
+
+//订单编号
+func (c *Chaincode) queryOrderFromEntry(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
+	jsonResult, err := stub.GetState(args[0])
+	if err != nil {
+		return nil, err
+	}
+	return jsonResult, nil
 }
 
 //=================================================================================================================================//
@@ -474,4 +699,132 @@ func (c *Chaincode) getUser(stub shim.ChaincodeStubInterface, key string) (User,
 
 func (c *Chaincode) ping(stub shim.ChaincodeStubInterface) ([]byte, error) {
 	return []byte("Hello, world!"), nil
+}
+
+//=================================================================================================================================//
+//	some globe varaible
+//=================================================================================================================================//
+
+// 获得下一个空的订单ID，并且ID加1
+func (c *Chaincode) getNextID(stub shim.ChaincodeStubInterface) (uint64, error) {
+	var id uint64
+	idByte, err := stub.GetState("@counterOrder")
+	if err != nil {
+		return 0, err
+	}
+	id, err = strconv.ParseUint(string(idByte), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	err = stub.PutState("@counterOrder", []byte(fmt.Sprintf("%d", id+1)))
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+func (c *Chaincode) getOrderPool(stub shim.ChaincodeStubInterface, driver User) ([4]uint64, error) {
+	var result = [4]uint64{0, 0, 0, 0}
+	var op OrderPool
+	idx := 0
+	jsonResult, err := stub.GetState("@orderPool")
+	if err != nil {
+		return result, err
+	}
+	err = json.Unmarshal(jsonResult, &op)
+	if err != nil {
+		return result, err
+	}
+
+	var i uint
+	for i = 0; i < op.Total && idx < 4; i++ {
+		if !op.Act[i] {
+			continue
+		}
+		order, err := c.getOrder(stub, fmt.Sprintf("%d", op.IDs[i]))
+		if err != nil {
+			return result, nil
+		}
+		if driverSelect(order, driver) {
+			result[idx] = op.IDs[i]
+			idx++
+		}
+	}
+
+	return result, nil
+}
+
+func (c *Chaincode) addOrderPool(stub shim.ChaincodeStubInterface, id uint64) error {
+	var op OrderPool
+	jsonResult, err := stub.GetState("@orderPool")
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(jsonResult, &op)
+	if err != nil {
+		return err
+	}
+
+	op.Total++
+	op.IDs = append(op.IDs, id)
+	op.Act = append(op.Act, true)
+
+	jsonResult, err = json.Marshal(op)
+	if err != nil {
+		return err
+	}
+	err = stub.PutState("@orderPool", jsonResult)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Chaincode) deleteOrderPool(stub shim.ChaincodeStubInterface, id uint64) error {
+	var op OrderPool
+	jsonResult, err := stub.GetState("@orderPool")
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(jsonResult, &op)
+	if err != nil {
+		return err
+	}
+
+	op.Act[id] = false
+
+	jsonResult, err = json.Marshal(op)
+	if err != nil {
+		return err
+	}
+	err = stub.PutState("@orderPool", jsonResult)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+const earthRadius = 6378.137
+const threadhold = 100.0
+
+func driverSelect(order Order, driver User) bool {
+	if distance(order.StartX, order.StartY, driver.X, driver.Y) < threadhold {
+		return true
+	}
+	return false
+}
+
+func distance(x1 float64, y1 float64, x2 float64, y2 float64) float64 {
+	var radLng1, radLat1, radLng2, radLat2 float64
+	radLng1 = x1 * math.Pi / 180.0
+	radLat1 = y1 * math.Pi / 180.0
+	radLng2 = x2 * math.Pi / 180.0
+	radLat2 = y2 * math.Pi / 180.0
+	a := radLat1 - radLat2
+	b := radLng1 - radLng2
+	s := 2 * math.Asin(math.Sqrt(math.Pow(math.Sin(a/2), 2)+math.Cos(radLat1)*math.Cos(radLat2)*math.Pow(math.Sin(b/2), 2)))
+	s = s * earthRadius
+	return s
 }

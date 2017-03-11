@@ -9,8 +9,6 @@ import (
 
 	"encoding/json"
 
-	"bytes"
-
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
@@ -68,7 +66,7 @@ type User struct {
 	PassengerState  int       `json:"pState"`
 	Balance         int32     `json:"balance"`
 	Role            int       `json:"role"`
-	PwdHash         []byte    `jons:"pwdHash"`
+	PwdHash         string    `jons:"pwdHash"`
 }
 
 //=================================================================================================================================//
@@ -267,7 +265,7 @@ func (c *Chaincode) getPassengerState(stub shim.ChaincodeStubInterface, args []s
 func (c *Chaincode) enroll(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	var newUser User
 	newUser.Name = args[0]
-	newUser.PwdHash = []byte(args[1])
+	newUser.PwdHash = args[1]
 	role, err := strconv.Atoi(args[3])
 	if err != nil {
 		return nil, errors.New("arguments must be convertable to int")
@@ -293,7 +291,7 @@ func (c *Chaincode) isEnroll(stub shim.ChaincodeStubInterface, args []string) ([
 	if err != nil {
 		return nil, err
 	}
-	if bytes.Equal(user.PwdHash, []byte(args[1])) {
+	if args[1] == user.PwdHash {
 		return []byte(strconv.Itoa(user.Role)), nil
 	}
 	return []byte("0"), nil
@@ -343,7 +341,7 @@ func (c *Chaincode) getOrder(stub shim.ChaincodeStubInterface, key string) (Orde
 	if err != nil {
 		return re, err
 	}
-	err = json.Unmarshal(jsonResult, re)
+	err = json.Unmarshal(jsonResult, &re)
 	if err != nil {
 		return re, err
 	}

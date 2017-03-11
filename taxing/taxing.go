@@ -136,6 +136,14 @@ func (c *Chaincode) Invoke(stub shim.ChaincodeStubInterface, function string, ar
 		return c.ping(stub)
 	case "enroll":
 		return c.enroll(stub, args)
+	case "submit":
+		return c.passengerSubmitOrder(stub, args)
+	case "compet":
+		return c.driverCompetOrder(stub, args)
+	case "pickup":
+		return c.driverPickUp(stub, args)
+	case "finish":
+		return c.driverFinishOrder(stub, args)
 	}
 	fmt.Println("Invoke did not find func: " + function)
 	return nil, errors.New("Received unknown function " + function)
@@ -151,6 +159,16 @@ func (c *Chaincode) Query(stub shim.ChaincodeStubInterface, function string, arg
 		return c.ping(stub)
 	case "isEnroll":
 		return c.isEnroll(stub, args)
+	case "getdriverstate":
+		return c.getDriverState(stub, args)
+	case "getpassstate:":
+		return c.getPassengerState(stub, args)
+	case "queryorderpool":
+		return c.driverQueryOrderPool(stub, args)
+	case "queryorderentry":
+		return c.queryOrderFromEntry(stub, args)
+	case "queryordertable":
+		return c.queryOrderFromTable(stub, args)
 	}
 
 	fmt.Println("Query did not find func: " + function)

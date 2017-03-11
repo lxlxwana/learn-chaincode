@@ -272,10 +272,11 @@ func (c *Chaincode) enroll(stub shim.ChaincodeStubInterface, args []string) ([]b
 	}
 	switch role {
 	case 1:
-		newUser.DriverInfo = args[3]
+		newUser.DriverInfo = args[2]
 	case 2:
-		newUser.PassengerInfo = args[3]
+		newUser.PassengerInfo = args[2]
 	}
+	newUser.Role = role
 	newUser.Balance = 100000000
 	err = c.setUser(stub, args[0], newUser)
 	if err != nil {

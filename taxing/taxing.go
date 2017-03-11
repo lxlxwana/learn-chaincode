@@ -366,6 +366,9 @@ func (c *Chaincode) driverFinishOrder(stub shim.ChaincodeStubInterface, args []s
 	order.State = ORDER_STATE_FINISH
 	order.ActFeeTime = int32((order.EndTime - order.StartTime) * unitPriceTime)
 	order.ActFeeDis = startingPrice + int32(distance(order.StartX, order.StartY, order.DestX, order.DestY)*unitPriceDistance)
+	totalFee := order.ActFeeDis + order.ActFeeTime
+	driver.Balance += totalFee
+	passenger.Balance -= totalFee
 
 	driver.DriverState = DRIVER_STATE_HAND
 	err = c.setUser(stub, args[0], driver)

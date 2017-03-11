@@ -277,6 +277,11 @@ func (c *Chaincode) driverCompetOrder(stub shim.ChaincodeStubInterface, args []s
 	order.DriverInfo = driver.DriverInfo
 
 	driver.DriverState = DRIVER_STATE_PCIKUP
+	temp, err := strconv.ParseUint(args[2], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	driver.OrderID = temp
 	err = c.setUser(stub, args[0], driver)
 	if err != nil {
 		return nil, err

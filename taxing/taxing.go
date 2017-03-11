@@ -285,6 +285,10 @@ func (c *Chaincode) driverCompetOrder(stub shim.ChaincodeStubInterface, args []s
 	if err != nil {
 		return nil, err
 	}
+	err = c.setOrder(stub, args[2], order)
+	if err != nil {
+		return nil, err
+	}
 	c.deleteOrderPool(stub, order.ID)
 	return []byte("success compet order"), nil
 }
@@ -310,6 +314,10 @@ func (c *Chaincode) driverPickUp(stub shim.ChaincodeStubInterface, args []string
 	}
 	order.PickTime = now
 
+	err = c.setOrder(stub, fmt.Sprintf("%d", driver.OrderID), order)
+	if err != nil {
+		return nil, err
+	}
 	driver.DriverState = DRIVER_STATE_ONGOING
 	err = c.setUser(stub, args[0], driver)
 	if err != nil {
@@ -361,6 +369,10 @@ func (c *Chaincode) driverFinishOrder(stub shim.ChaincodeStubInterface, args []s
 	}
 	passenger.PassengerState = PASSENGER_STATE_HAND
 	err = c.setUser(stub, order.Passenger, passenger)
+	if err != nil {
+		return nil, err
+	}
+	err = c.setOrder(stub, fmt.Sprintf("%d", order.ID), order)
 	if err != nil {
 		return nil, err
 	}

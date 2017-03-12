@@ -110,6 +110,9 @@ func (c *Chaincode) Init(stub shim.ChaincodeStubInterface, function string, args
 		return nil, err
 	}
 
+	var newOrder Order
+	c.setOrder(stub, "0", newOrder)
+
 	var newOP OrderPool
 	// newOP.Total = 1
 	// newOP.IDs = append(newOP.IDs, 0)
@@ -550,8 +553,8 @@ func (c *Chaincode) getBalanceAndFee(stub shim.ChaincodeStubInterface, args []st
 		return nil, err
 	}
 
-	jsonStr := fmt.Sprintf("[\"%d\", \"%d\"]", user.Balance, order.ActFeeDis+order.ActFeeTime)
-	// ["1000", "888"]
+	jsonStr := fmt.Sprintf("[\"%d\", \"%d\", \"%d\"]", user.Balance, order.ActFeeDis, order.ActFeeTime)
+	// ["1000", "888", "1111"]
 	return []byte(jsonStr), nil
 }
 

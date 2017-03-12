@@ -364,7 +364,7 @@ func (c *Chaincode) driverFinishOrder(stub shim.ChaincodeStubInterface, args []s
 	}
 	order.EndTime = now
 	order.State = ORDER_STATE_FINISH
-	order.ActFeeTime = int32((order.EndTime - order.StartTime) * unitPriceTime)
+	order.ActFeeTime = int32((order.EndTime - order.PickTime) * unitPriceTime)
 	order.ActFeeDis = startingPrice + int32(distance(order.StartX, order.StartY, order.DestX, order.DestY)*unitPriceDistance)
 	totalFee := order.ActFeeDis + order.ActFeeTime
 	driver.Balance += totalFee
@@ -542,6 +542,15 @@ func (c *Chaincode) setPassengerState(stub shim.ChaincodeStubInterface, userName
 	return nil
 }
 
+// RetBalance is
+type RetBalance struct {
+	Balance        int32   `json:"balance"`
+	Distance       float64 `json:"distance"`
+	ActFeeDistance int32   `json:"actFeeDistance"`
+	Duration       uint64  `json:"duration"`
+	ActFeeDuration int32   `json:"actFeeDuration"`
+}
+
 // 用户名 密码
 func (c *Chaincode) getBalanceAndFee(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	user, err := c.getUser(stub, args[0])
@@ -553,9 +562,18 @@ func (c *Chaincode) getBalanceAndFee(stub shim.ChaincodeStubInterface, args []st
 		return nil, err
 	}
 
-	jsonStr := fmt.Sprintf("[\"%d\", \"%d\", \"%d\"]", user.Balance, order.ActFeeDis, order.ActFeeTime)
-	// ["1000", "888", "1111"]
-	return []byte(jsonStr), nil
+	var ret RetBalance
+	ret.Balance = user.Balance
+	ret.Distance = distance(order.StartX, order.StartY, order.DestX, order.DestY)
+	ret.ActFeeDistance = order.ActFeeDis
+	ret.Duration = order.EndTime - order.PickTime
+	ret.ActFeeDuration = order.ActFeeTime
+	jsonStr, err := json.Marshal(ret)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonStr, nil
 }
 
 //=================================================================================================================================//

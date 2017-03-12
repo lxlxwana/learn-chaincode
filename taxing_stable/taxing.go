@@ -1,11 +1,15 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"math"
+
+	"errors"
+
 	"strconv"
+
+	"encoding/json"
+
+	"math"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
@@ -28,6 +32,13 @@ const (
 
 // Chaincode is
 type Chaincode struct {
+}
+
+func main() {
+	err := shim.Start(new(Chaincode))
+	if err != nil {
+		fmt.Printf("Error starting chaincode %s", err)
+	}
 }
 
 // Order is
@@ -69,13 +80,6 @@ type User struct {
 	Role           int     `json:"role"`
 	PwdHash        string  `json:"pwdHash"`
 	OrderID        uint64  `json:"orderID"`
-}
-
-func main() {
-	err := shim.Start(new(Chaincode))
-	if err != nil {
-		fmt.Printf("Error starting chaincode %s", err)
-	}
 }
 
 //=================================================================================================================================//
@@ -168,8 +172,6 @@ func (c *Chaincode) Query(stub shim.ChaincodeStubInterface, function string, arg
 		return c.queryOrderFromEntry(stub, args)
 	case "queryordertable":
 		return c.queryOrderFromTable(stub, args)
-	case "balance":
-		return c.getBalanceAndFee(stub, args)
 	}
 
 	fmt.Println("Query did not find func: " + function)
@@ -183,7 +185,7 @@ func (c *Chaincode) Query(stub shim.ChaincodeStubInterface, function string, arg
 //=================================================================================================================================//
 
 //=================================================================================================================================//
-// main function
+// 主流程
 //=================================================================================================================================//
 
 // 用户名 密码 起点经度 起点纬度 终点经度 终点纬度 当前时间 起点地名 终点地名
@@ -333,11 +335,12 @@ func (c *Chaincode) driverPickUp(stub shim.ChaincodeStubInterface, args []string
 	return []byte("success pickup"), nil
 }
 
+// 用户名 密码 当前时间
+
 const unitPriceTime = 1
 const startingPrice = 1100
 const unitPriceDistance = 1500
 
-// 用户名 密码 当前时间
 func (c *Chaincode) driverFinishOrder(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
 	driver, err := c.getUser(stub, args[0])
 	if err != nil {
@@ -389,7 +392,6 @@ func (c *Chaincode) driverFinishOrder(stub shim.ChaincodeStubInterface, args []s
 }
 
 //=================================================================================================================================//
-// driver related
 //=================================================================================================================================//
 
 // 用户名  密码哈希值 经度 纬度 是否接单
@@ -445,22 +447,20 @@ func (c *Chaincode) driverQueryOrderPool(stub shim.ChaincodeStubInterface, args 
 	if err != nil {
 		return nil, err
 	}
-	var ret []RetOrder
+	var ret [4]RetOrder
 	for i := 0; i < 4; i++ {
 		if op[i] != 0 {
-			var temRet RetOrder
 			sName, err := stub.GetState(fmt.Sprintf("@SPlace_%d", op[i]))
 			if err != nil {
 				return nil, err
 			}
-			temRet.SName = fmt.Sprintf("%s", sName)
+			ret[i].SName = fmt.Sprintf("%s", sName)
 			dName, err := stub.GetState(fmt.Sprintf("@DPlace_%d", op[i]))
 			if err != nil {
 				return nil, err
 			}
-			temRet.DName = fmt.Sprintf("%s", dName)
-			temRet.ID = op[i]
-			ret = append(ret, temRet)
+			ret[i].DName = fmt.Sprintf("%s", dName)
+			ret[i].ID = op[i]
 		}
 	}
 	re, err := json.Marshal(ret)
@@ -537,22 +537,6 @@ func (c *Chaincode) setPassengerState(stub shim.ChaincodeStubInterface, userName
 		return err
 	}
 	return nil
-}
-
-// 用户名 密码
-func (c *Chaincode) getBalanceAndFee(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
-	user, err := c.getUser(stub, args[0])
-	if err != nil {
-		return nil, err
-	}
-	order, err := c.getOrder(stub, fmt.Sprintf("%d", user.OrderID))
-	if err != nil {
-		return nil, err
-	}
-
-	jsonStr := fmt.Sprintf("[\"%d\", \"%d\"]", user.Balance, order.ActFeeDis+order.ActFeeTime)
-	// ["1000", "888"]
-	return []byte(jsonStr), nil
 }
 
 //=================================================================================================================================//
@@ -695,7 +679,7 @@ func (c *Chaincode) queryOrderFromEntry(stub shim.ChaincodeStubInterface, args [
 }
 
 //=================================================================================================================================//
-//	Basic Read & Write data to ledger
+//	Read & Write data to ledger
 //=================================================================================================================================//
 
 func (c *Chaincode) read(stub shim.ChaincodeStubInterface, args []string) ([]byte, error) {
@@ -780,10 +764,6 @@ func (c *Chaincode) getNextID(stub shim.ChaincodeStubInterface) (uint64, error) 
 	}
 	return id, nil
 }
-
-//=================================================================================================================================//
-//	operations for orderpool (get, add, delete)
-//=================================================================================================================================//
 
 func (c *Chaincode) getOrderPool(stub shim.ChaincodeStubInterface, driver User) ([4]uint64, error) {
 	var result = [4]uint64{0, 0, 0, 0}
@@ -872,10 +852,6 @@ func (c *Chaincode) deleteOrderPool(stub shim.ChaincodeStubInterface, id uint64)
 
 	return nil
 }
-
-//=================================================================================================================================//
-// private function for internal logic
-//=================================================================================================================================//
 
 const earthRadius = 6378.137
 const threadhold = 100.0
